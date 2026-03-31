@@ -7,7 +7,8 @@
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
     <style>
-        :root { --primary: #007aff; --bg: #f2f2f7; --now-line: #ff3b30; }
+        /* primary 색상을 검은색(#1c1c1e)으로 변경했습니다 */
+        :root { --primary: #1c1c1e; --bg: #f2f2f7; --now-line: #ff3b30; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1c1c1e; line-height: 1.5; }
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 12px; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); margin-bottom: 12px; }
@@ -20,11 +21,16 @@
         
         .time-label { font-size: 15px; color: #1c1c1e; margin-bottom: 8px; display: block; padding-left: 4px; font-weight: 800; }
         
-        button#save-btn { background: var(--primary); color: white; border: none; font-weight: 700; cursor: pointer; padding: 16px; font-size: 18px; margin-top: 10px; transition: background 0.2s; }
-        button#save-btn:active { background: #0056b3; }
+        /* 버튼 디자인: 배경은 검정, 글자는 하양 */
+        button#save-btn { background: var(--primary); color: white; border: none; font-weight: 700; cursor: pointer; padding: 16px; font-size: 18px; margin-top: 10px; transition: opacity 0.2s; }
+        button#save-btn:active { opacity: 0.7; }
 
         .fc-toolbar-chunk { display: flex !important; align-items: center !important; gap: 6px !important; }
         .fc-button { height: 44px !important; padding: 0 14px !important; font-size: 15px !important; font-weight: 700 !important; border-radius: 10px !important; }
+        /* 상단 툴바 버튼들도 세련된 검정 계열로 통일 */
+        .fc-button-primary { background-color: #1c1c1e !important; border-color: #1c1c1e !important; }
+        .fc-button-primary:disabled { background-color: #8e8e93 !important; border-color: #8e8e93 !important; }
+        
         .fc-toolbar-title { font-size: 1.3rem !important; font-weight: 800 !important; }
 
         #calendar-container { overflow-x: auto; background: white; border-radius: 18px; min-height: 700px; -webkit-overflow-scrolling: touch; }
@@ -34,7 +40,6 @@
         .fc-daygrid-event { font-size: 15px !important; font-weight: 700 !important; }
         .fc-v-event .fc-event-main { white-space: normal !important; word-break: break-all !important; padding: 10px !important; }
 
-        /* List 탭 스타일 보정 */
         .fc-list-event { cursor: pointer !important; }
         .fc-list-event-time { font-size: 15px !important; font-weight: 600 !important; color: #48484a !important; }
 
@@ -60,7 +65,7 @@
                     <span class="time-label">색상 태그</span>
                     <select id="event-color">
                         <option value="#007aff">🔵 파랑</option>
-                        <option value="#b03a2e">🔴 빨강</option>
+                        <option value="#b03a2e">🔴 버건디</option>
                         <option value="#ff9500">🟠 주황</option>
                         <option value="#ffcc00">🟡 노랑</option>
                         <option value="#34c759">🟢 초록</option>
@@ -141,7 +146,6 @@
                 if (confirm(`[${info.event.title}]\n이 일정을 삭제하시겠습니까?`)) deleteEventById(eventId);
             },
             eventContent: function(arg) {
-                // [수정] 리스트 탭일 때 제목이 확실히 나오도록 처리
                 if (arg.view.type === 'listWeek') {
                     let listTitle = document.createElement('div');
                     listTitle.innerText = arg.event.title;
