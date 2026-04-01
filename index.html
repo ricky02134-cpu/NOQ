@@ -214,7 +214,7 @@
         if (info.view.type === 'dayGridMonth') {
             const currentMonth = info.view.currentStart.getMonth();
             const currentYear = info.view.currentStart.getFullYear();
-            statsTitle.innerText = `${currentYear}년 ${currentMonth + 1}월 사용 기록`;
+            statsTitle.innerText = `${currentYear}년 ${currentMonth + 1}월 통계`;
             
             events.forEach(ev => {
                 if (ev.start.getMonth() === currentMonth && ev.start.getFullYear() === currentYear) {
@@ -224,7 +224,7 @@
                 }
             });
         } else {
-            statsTitle.innerText = "주간 사용 기록";
+            statsTitle.innerText = "주간 통계";
             events.forEach(ev => {
                 if (ev.start >= filterStart && ev.start < filterEnd) {
                     const color = ev.backgroundColor || ev.color;
