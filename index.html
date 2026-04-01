@@ -96,9 +96,10 @@
 
 <script>
     const API_URL = "https://sheetdb.io/api/v1/xldk72yva40nn"; 
+    // [업데이트] COLOR_MAP에 보라색(기타) 추가
     const COLOR_MAP = {
         "#007aff": "남기", "#34c759": "태건", "#ffcc00": "해인", 
-        "#b03a2e": "NOQ 업무", "#ff9500": "NOQ 외 업무"
+        "#b03a2e": "NOQ 업무", "#ff9500": "NOQ 외 업무", "#5856d6": "기타"
     };
 
     const TAGS = {
@@ -109,7 +110,8 @@
         ],
         reservation: [
             { val: "#b03a2e", text: "🔴 NOQ 업무" },
-            { val: "#ff9500", text: "🟠 NOQ 외 업무" }
+            { val: "#ff9500", text: "🟠 NOQ 외 업무" },
+            { val: "#5856d6", text: "🟣 기타" } // [업데이트] 보라색 태그 추가
         ]
     };
 
@@ -195,7 +197,6 @@
         let filterStart = info.view.activeStart;
         let filterEnd = info.view.activeEnd;
 
-        // [개선] Month 탭일 경우 해당 월만 필터링
         if (info.view.type === 'dayGridMonth') {
             const currentMonth = info.view.currentStart.getMonth();
             const currentYear = info.view.currentStart.getFullYear();
