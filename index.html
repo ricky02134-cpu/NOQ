@@ -40,6 +40,14 @@
         .fc-event { cursor: pointer; border: none !important; border-radius: 8px !important; }
         .fc-v-event .fc-event-main { padding: 10px !important; }
         .fc-list-event-time { font-size: 15px !important; font-weight: 600 !important; color: #48484a !important; }
+
+        /* [복구 및 강화] 현재 시간 빨간색 실선 스타일 */
+        .fc .fc-timegrid-now-indicator-line { border-color: var(--now-line) !important; border-width: 3px !important; z-index: 100; }
+        .fc .fc-timegrid-now-indicator-arrow { 
+            border-color: var(--now-line) !important; 
+            border-width: 6px !important;
+            margin-top: -5px !important;
+        }
     </style>
 </head>
 <body>
@@ -96,11 +104,17 @@
 
 <script>
     const API_URL = "https://sheetdb.io/api/v1/xldk72yva40nn"; 
-    // [업데이트] COLOR_MAP에 보라색(기타) 추가
+    
     const COLOR_MAP = {
-        "#007aff": "남기", "#34c759": "태건", "#ffcc00": "해인", 
-        "#b03a2e": "NOQ 업무", "#ff9500": "NOQ 외 업무", "#5856d6": "기타"
+        "#b03a2e": "NOQ 업무",
+        "#ff9500": "NOQ 외 업무",
+        "#ffcc00": "해인",
+        "#34c759": "태건",
+        "#007aff": "남기",
+        "#5856d6": "기타"
     };
+
+    const SORT_ORDER = ["#b03a2e", "#ff9500", "#ffcc00", "#34c759", "#007aff", "#5856d6"];
 
     const TAGS = {
         attendance: [
@@ -111,7 +125,7 @@
         reservation: [
             { val: "#b03a2e", text: "🔴 NOQ 업무" },
             { val: "#ff9500", text: "🟠 NOQ 외 업무" },
-            { val: "#5856d6", text: "🟣 기타" } // [업데이트] 보라색 태그 추가
+            { val: "#5856d6", text: "🟣 기타" }
         ]
     };
 
@@ -221,8 +235,18 @@
         }
 
         const container = document.getElementById('stats-content');
-        container.innerHTML = Object.keys(stats).length ? "" : "<span style='color:#8e8e93; font-size:14px;'>기록이 없습니다.</span>";
-        Object.entries(stats).forEach(([color, hours]) => {
+        container.innerHTML = "";
+
+        if (Object.keys(stats).length === 0) {
+            container.innerHTML = "<span style='color:#8e8e93; font-size:14px;'>기록이 없습니다.</span>";
+            return;
+        }
+
+        const sortedEntries = Object.entries(stats).sort((a, b) => {
+            return SORT_ORDER.indexOf(a[0]) - SORT_ORDER.indexOf(b[0]);
+        });
+
+        sortedEntries.forEach(([color, hours]) => {
             const item = document.createElement('div');
             item.className = 'stat-item';
             item.innerHTML = `<div class="stat-dot" style="background:${color}"></div><span>${COLOR_MAP[color] || '기타'}: ${hours.toFixed(1)}h</span>`;
