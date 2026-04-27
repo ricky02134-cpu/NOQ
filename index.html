@@ -41,7 +41,7 @@
         .fc-v-event .fc-event-main { padding: 10px !important; }
         .fc-list-event-time { font-size: 15px !important; font-weight: 600 !important; color: #48484a !important; }
 
-        /* [복구 및 강화] 현재 시간 빨간색 실선 스타일 */
+        /* 현재 시간 빨간색 실선 스타일 */
         .fc .fc-timegrid-now-indicator-line { border-color: var(--now-line) !important; border-width: 3px !important; z-index: 100; }
         .fc .fc-timegrid-now-indicator-arrow { 
             border-color: var(--now-line) !important; 
@@ -104,6 +104,7 @@
 
 <script>
     const API_URL = "https://sheetdb.io/api/v1/xldk72yva40nn"; 
+    let calendar; // [수정] 달력 인스턴스를 전역변수로 관리
     
     const COLOR_MAP = {
         "#b03a2e": "NOQ 업무",
@@ -154,7 +155,7 @@
 
     function initCalendar() {
         var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
+        calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
             locale: 'ko',
             firstDay: 1, 
@@ -267,14 +268,23 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ data: [{ title, start, end, color, id: "NOQ-" + Date.now() }] })
             });
-            if(res.ok) { alert("등록되었습니다."); location.reload(); }
+            if(res.ok) { 
+                alert("등록되었습니다."); 
+                // [개선] 새로고침 대신 데이터만 갱신하고 해당 날짜로 이동
+                calendar.refetchEvents(); 
+                calendar.gotoDate(start); 
+                document.getElementById('title').value = ""; // 입력란 초기화
+            }
         } catch (e) { alert("오류 발생"); }
     }
 
     async function deleteEventById(id) {
         try {
             const res = await fetch(`${API_URL}/id/${id}`, { method: 'DELETE' });
-            if(res.ok) { alert("삭제되었습니다."); location.reload(); }
+            if(res.ok) { 
+                alert("삭제되었습니다."); 
+                calendar.refetchEvents(); // [개선] 새로고침 없이 데이터 갱신
+            }
         } catch (e) { alert("오류 발생"); }
     }
 </script>
