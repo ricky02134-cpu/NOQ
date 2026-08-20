@@ -1,19 +1,26 @@
-```html
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
     <title>NOQ 사무실 스케줄러</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <link
+        href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css"
+        rel="stylesheet"
+    >
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"
+    ></script>
 
     <style>
         :root {
             --primary: #1c1c1e;
             --bg: #f2f2f7;
             --now-line: #ff3b30;
+            --reservation: #b03a2e;
         }
 
         body {
@@ -97,12 +104,13 @@
             padding: 16px;
             font-size: 18px;
             margin-top: 10px;
-            transition: opacity 0.2s;
         }
 
         button#save-btn:active {
             opacity: 0.7;
         }
+
+        /* 통계 */
 
         #stats-board {
             display: flex;
@@ -145,6 +153,8 @@
             height: 10px;
             border-radius: 50%;
         }
+
+        /* 캘린더 */
 
         .fc-toolbar-chunk {
             display: flex !important;
@@ -203,7 +213,8 @@
             color: #48484a !important;
         }
 
-        /* 현재 시간 빨간색 실선 스타일 */
+        /* 현재 시간 */
+
         .fc .fc-timegrid-now-indicator-line {
             border-color: var(--now-line) !important;
             border-width: 3px !important;
@@ -214,6 +225,74 @@
             border-color: var(--now-line) !important;
             border-width: 6px !important;
             margin-top: -5px !important;
+        }
+
+        /* 일정 선택 팝업 */
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-box {
+            width: 100%;
+            max-width: 360px;
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .modal-message {
+            color: #636366;
+            font-size: 15px;
+            margin-bottom: 20px;
+            word-break: break-word;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .modal-buttons button {
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #modal-edit-btn {
+            background: #1c1c1e;
+            color: white;
+        }
+
+        #modal-delete-btn {
+            background: #ff3b30;
+            color: white;
+        }
+
+        #modal-cancel-btn {
+            background: #e5e5ea;
+            color: #1c1c1e;
         }
     </style>
 </head>
@@ -229,96 +308,128 @@
         <div class="input-group">
 
             <div class="input-row">
-
-                <div>
-                    <span class="time-label">이름/예약명</span>
-                    <input type="text" id="title" placeholder="이름 입력">
-                </div>
-
                 <div>
                     <span class="time-label">구분</span>
 
-                    <select id="category" onchange="updateTagOptions()">
-
+                    <select
+                        id="category"
+                        onchange="updateFormByCategory()"
+                    >
                         <option value="attendance">
-                            👤 출퇴근 기록
+                            👤 구성원 출근
                         </option>
 
                         <option value="reservation">
                             🏠 공용 공간 예약
                         </option>
+                    </select>
+                </div>
+            </div>
 
+            <!-- 구성원 출근 -->
+
+            <div
+                class="input-row"
+                id="attendance-fields"
+            >
+                <div>
+                    <span class="time-label">구성원</span>
+
+                    <select id="member">
+                        <option value="남기">🔵 남기</option>
+                        <option value="태건">🟢 태건</option>
+                        <option value="해인">🟡 해인</option>
+                        <option value="형대">🟣 형대</option>
+                        <option value="예진">🟠 예진</option>
                     </select>
                 </div>
 
                 <div>
+                    <span class="time-label">출근 유형</span>
 
-                    <span class="time-label">태그</span>
-
-                    <select id="event-color"></select>
-
+                    <select id="work-type">
+                        <option value="사무실">🏢 사무실</option>
+                        <option value="재택">🏠 재택</option>
+                        <option value="외근">🚗 외근</option>
+                        <option value="공연">🎭 공연</option>
+                    </select>
                 </div>
-
             </div>
 
-            <div class="input-row">
+            <!-- 공용 공간 예약 -->
 
-                <div style="flex: 2;">
+            <div
+                class="input-row"
+                id="reservation-fields"
+                style="display:none;"
+            >
+                <div>
+                    <span class="time-label">예약명</span>
+
+                    <input
+                        type="text"
+                        id="reservation-title"
+                        placeholder="예: 회의, 미팅, 외부 손님"
+                    >
+                </div>
+            </div>
+
+            <!-- 시작 일시 -->
+
+            <div class="input-row">
+                <div style="flex:2;">
 
                     <span class="time-label">시작 일시</span>
 
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display:flex; gap:6px;">
 
                         <input
                             type="date"
                             id="start-date"
-                            style="flex: 1.5;"
+                            style="flex:1.5;"
                         >
 
                         <select
                             id="start-hour"
-                            style="flex: 1;"
+                            style="flex:1;"
                         ></select>
 
                         <select
                             id="start-min"
-                            style="flex: 1;"
+                            style="flex:1;"
                         ></select>
 
                     </div>
-
                 </div>
-
             </div>
 
-            <div class="input-row">
+            <!-- 종료 일시 -->
 
-                <div style="flex: 2;">
+            <div class="input-row">
+                <div style="flex:2;">
 
                     <span class="time-label">종료 일시</span>
 
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display:flex; gap:6px;">
 
                         <input
                             type="date"
                             id="end-date"
-                            style="flex: 1.5;"
+                            style="flex:1.5;"
                         >
 
                         <select
                             id="end-hour"
-                            style="flex: 1;"
+                            style="flex:1;"
                         ></select>
 
                         <select
                             id="end-min"
-                            style="flex: 1;"
+                            style="flex:1;"
                         ></select>
 
                     </div>
-
                 </div>
-
             </div>
 
             <button
@@ -329,12 +440,11 @@
             </button>
 
         </div>
-
     </div>
 
+    <!-- 통계 -->
 
     <div id="stats-board">
-
         <div id="stats-title">
             사용 기록 로딩 중...
         </div>
@@ -342,1321 +452,1028 @@
         <div id="stats-content">
             데이터를 불러오는 중...
         </div>
-
     </div>
 
+    <!-- 캘린더 -->
 
-    <div id="calendar-container" class="card">
-
+    <div
+        id="calendar-container"
+        class="card"
+    >
         <div id="calendar"></div>
-
     </div>
 
 </div>
 
+<!-- 일정 선택 팝업 -->
+
+<div
+    id="event-modal"
+    class="modal-overlay"
+>
+    <div class="modal-box">
+
+        <div
+            class="modal-title"
+            id="modal-title"
+        >
+            일정
+        </div>
+
+        <div
+            class="modal-message"
+            id="modal-message"
+        ></div>
+
+        <div class="modal-buttons">
+
+            <button id="modal-edit-btn">
+                수정하기
+            </button>
+
+            <button id="modal-delete-btn">
+                삭제하기
+            </button>
+
+            <button id="modal-cancel-btn">
+                취소
+            </button>
+
+        </div>
+
+    </div>
+</div>
 
 <script>
 
-    const API_URL =
-        "https://sheetdb.io/api/v1/xldk72yva40nn";
+const API_URL =
+    "https://sheetdb.io/api/v1/xldk72yva40nn";
+
+let calendar;
+let editingEventId = null;
+let selectedEvent = null;
 
 
-    let calendar;
+/* 구성원 색상 */
+
+const MEMBER_COLORS = {
+    "남기": "#007aff",
+    "태건": "#34c759",
+    "해인": "#ffcc00",
+    "형대": "#5856d6",
+    "예진": "#ff9500"
+};
 
 
-    /*
-        현재 수정 중인 일정 ID
+/* 공용 공간 예약 */
 
-        null이면 새 일정 등록
-        값이 있으면 기존 일정 수정
-    */
-
-    let editingEventId = null;
+const RESERVATION_COLOR =
+    "#b03a2e";
 
 
-    const COLOR_MAP = {
-
-        "#b03a2e": "NOQ 업무",
-
-        "#ff9500": "NOQ 외 업무",
-
-        "#ffcc00": "해인",
-
-        "#34c759": "태건",
-
-        "#007aff": "남기",
-
-        "#5856d6": "기타"
-
-    };
+const COLOR_MAP = {
+    "#007aff": "남기",
+    "#34c759": "태건",
+    "#ffcc00": "해인",
+    "#5856d6": "형대",
+    "#ff9500": "예진",
+    "#b03a2e": "공용 공간 예약"
+};
 
 
-    const SORT_ORDER = [
-
-        "#b03a2e",
-
-        "#ff9500",
-
-        "#ffcc00",
-
-        "#34c759",
-
-        "#007aff",
-
-        "#5856d6"
-
-    ];
+const SORT_ORDER = [
+    "#007aff",
+    "#34c759",
+    "#ffcc00",
+    "#5856d6",
+    "#ff9500",
+    "#b03a2e"
+];
 
 
-    const TAGS = {
+/* 한국 시간 기준 오늘 날짜 */
 
-        attendance: [
+function getKoreaToday() {
 
-            {
-                val: "#007aff",
-                text: "🔵 남기"
-            },
+    const now = new Date();
 
-            {
-                val: "#34c759",
-                text: "🟢 태건"
-            },
-
-            {
-                val: "#ffcc00",
-                text: "🟡 해인"
-            }
-
-        ],
-
-        reservation: [
-
-            {
-                val: "#b03a2e",
-                text: "🔴 NOQ 업무"
-            },
-
-            {
-                val: "#ff9500",
-                text: "🟠 NOQ 외 업무"
-            },
-
-            {
-                val: "#5856d6",
-                text: "🟣 기타"
-            }
-
-        ]
-
-    };
-
-
-    /*
-        한국 시간 기준 오늘 날짜
-
-        toLocaleDateString을 이용해
-        Asia/Seoul 시간대를 명시적으로 사용
-    */
-
-    function getKoreaToday() {
-
-        const formatter =
-            new Intl.DateTimeFormat(
-                "en-CA",
+    const koreaTime =
+        new Date(
+            now.toLocaleString(
+                "en-US",
                 {
-                    timeZone: "Asia/Seoul",
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit"
+                    timeZone: "Asia/Seoul"
                 }
-            );
-
-
-        return formatter.format(new Date());
-
-    }
-
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        function() {
-
-            const hours =
-                Array.from(
-                    { length: 24 },
-                    (_, i) =>
-                        i
-                        .toString()
-                        .padStart(2, "0")
-                );
-
-
-            const mins =
-                Array.from(
-                    { length: 12 },
-                    (_, i) =>
-                        (i * 5)
-                        .toString()
-                        .padStart(2, "0")
-                );
-
-
-            const hSelects = [
-
-                document.getElementById("start-hour"),
-
-                document.getElementById("end-hour")
-
-            ];
-
-
-            const mSelects = [
-
-                document.getElementById("start-min"),
-
-                document.getElementById("end-min")
-
-            ];
-
-
-            hSelects.forEach(
-                s =>
-                    hours.forEach(
-                        h =>
-                            s.add(
-                                new Option(
-                                    h + "시",
-                                    h
-                                )
-                            )
-                    )
-            );
-
-
-            mSelects.forEach(
-                s =>
-                    mins.forEach(
-                        m =>
-                            s.add(
-                                new Option(
-                                    m + "분",
-                                    m
-                                )
-                            )
-                    )
-            );
-
-
-            /*
-                한국 시간 기준 날짜 설정
-            */
-
-            const today =
-                getKoreaToday();
-
-
-            document
-                .getElementById("start-date")
-                .value = today;
-
-
-            document
-                .getElementById("end-date")
-                .value = today;
-
-
-            updateTagOptions();
-
-            initCalendar();
-
-        }
-    );
-
-
-    function updateTagOptions() {
-
-        const cat =
-            document
-            .getElementById("category")
-            .value;
-
-
-        const tagSelect =
-            document
-            .getElementById("event-color");
-
-
-        tagSelect.innerHTML = "";
-
-
-        TAGS[cat].forEach(
-            t =>
-                tagSelect.add(
-                    new Option(
-                        t.text,
-                        t.val
-                    )
-                )
+            )
         );
 
-    }
-
-
-    function initCalendar() {
-
-        const calendarEl =
-            document.getElementById("calendar");
-
-
-        calendar =
-            new FullCalendar.Calendar(
-                calendarEl,
-                {
-
-                    initialView:
-                        "timeGridWeek",
-
-
-                    locale:
-                        "ko",
-
-
-                    firstDay:
-                        1,
-
-
-                    slotMinTime:
-                        "00:00:00",
-
-
-                    slotMaxTime:
-                        "24:00:00",
-
-
-                    scrollTime:
-                        "09:00:00",
-
-
-                    contentHeight:
-                        700,
-
-
-                    nowIndicator:
-                        true,
-
-
-                    allDaySlot:
-                        false,
-
-
-                    eventTimeFormat: {
-
-                        hour:
-                            "2-digit",
-
-                        minute:
-                            "2-digit",
-
-                        hour12:
-                            false
-
-                    },
-
-
-                    headerToolbar: {
-
-                        left:
-                            "prev,next today",
-
-                        center:
-                            "title",
-
-                        right:
-                            "dayGridMonth,timeGridWeek,listWeek"
-
-                    },
-
-
-                    eventSources: [
-
-                        {
-
-                            url:
-                                API_URL,
-
-
-                            success:
-                                content =>
-                                    content.map(
-                                        item => ({
-                                            id:
-                                                item.id,
-
-                                            title:
-                                                item.title,
-
-                                            start:
-                                                item.start,
-
-                                            end:
-                                                item.end,
-
-                                            color:
-                                                item.color
-                                        })
-                                    )
-
-                        }
-
-                    ],
-
-
-                    datesSet:
-                        info =>
-                            setTimeout(
-                                () =>
-                                    updateStats(info),
-                                500
-                            ),
-
-
-                    /*
-                        일정 클릭 시
-
-                        수정 / 삭제 / 취소 선택
-                    */
-
-                    eventClick:
-                        info => {
-
-                            const action =
-                                prompt(
-`[${info.event.title}]
-
-원하는 작업을 입력하세요.
-
-1 : 수정하기
-2 : 삭제하기
-
-취소하려면 아무것도 입력하지 않고 확인하세요.`
-                                );
-
-
-                            if (
-                                action === "1"
-                            ) {
-
-                                loadEventForEdit(
-                                    info.event
-                                );
-
-                            }
-
-
-                            else if (
-                                action === "2"
-                            ) {
-
-                                if (
-                                    confirm(
-                                        `[${info.event.title}]
-
-이 일정을 삭제하시겠습니까?`
-                                    )
-                                ) {
-
-                                    deleteEventById(
-                                        info.event.id
-                                    );
-
-                                }
-
-                            }
-
-                        },
-
-
-                    eventContent:
-                        arg => {
-
-
-                            if (
-                                arg.view.type ===
-                                "listWeek"
-                            ) {
-
-                                let t =
-                                    document
-                                    .createElement(
-                                        "div"
-                                    );
-
-
-                                t.innerText =
-                                    arg.event.title;
-
-
-                                t.style.fontSize =
-                                    "17px";
-
-
-                                t.style.fontWeight =
-                                    "800";
-
-
-                                return {
-
-                                    domNodes:
-                                        [t]
-
-                                };
-
-                            }
-
-
-                            let w =
-                                document
-                                .createElement(
-                                    "div"
-                                );
-
-
-                            w.style.display =
-                                "flex";
-
-
-                            w.style.flexDirection =
-                                "column";
-
-
-                            if (
-                                arg.view.type ===
-                                "dayGridMonth"
-                            ) {
-
-                                w.style.flexDirection =
-                                    "row";
-
-
-                                w.style.alignItems =
-                                    "center";
-
-
-                                let d =
-                                    document
-                                    .createElement(
-                                        "div"
-                                    );
-
-
-                                d.style.cssText =
-`width:8px;
-height:8px;
-border-radius:50%;
-background:${arg.event.backgroundColor};
-margin-right:5px;`;
-
-
-                                w.appendChild(d);
-
-                            }
-
-
-                            let c =
-                                document
-                                .createElement(
-                                    "div"
-                                );
-
-
-                            if (
-                                arg.view.type ===
-                                "timeGridWeek"
-                            ) {
-
-                                c.innerHTML =
-`<div style="font-size:14px;opacity:0.8;">
-${arg.timeText}
-</div>
-
-<div style="font-weight:800;font-size:17px;">
-${arg.event.title}
-</div>`;
-
-                            }
-
-
-                            else {
-
-                                c.innerText =
-                                    arg.event.title;
-
-
-                                c.style.fontWeight =
-                                    "800";
-
-                            }
-
-
-                            w.appendChild(c);
-
-
-                            return {
-
-                                domNodes:
-                                    [w]
-
-                            };
-
-                        }
-
-                }
+    const year =
+        koreaTime.getFullYear();
+
+    const month =
+        String(
+            koreaTime.getMonth() + 1
+        ).padStart(2, "0");
+
+    const day =
+        String(
+            koreaTime.getDate()
+        ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+
+/* 시작 */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        const hours =
+            Array.from(
+                { length: 24 },
+                (_, i) =>
+                    i.toString()
+                    .padStart(2, "0")
             );
 
 
-        calendar.render();
-
-    }
-
-
-    /*
-        일정 데이터를 입력창으로 불러오기
-
-        그리고 저장 버튼을
-        "일정 수정하기"로 변경
-    */
-
-    function loadEventForEdit(event) {
-
-        editingEventId =
-            event.id;
+        const mins =
+            Array.from(
+                { length: 12 },
+                (_, i) =>
+                    (i * 5)
+                    .toString()
+                    .padStart(2, "0")
+            );
 
 
-        document
-            .getElementById("title")
-            .value =
-                event.title;
+        const hourSelects = [
+            document.getElementById("start-hour"),
+            document.getElementById("end-hour")
+        ];
 
 
-        const start =
-            event.start;
+        const minSelects = [
+            document.getElementById("start-min"),
+            document.getElementById("end-min")
+        ];
 
 
-        const end =
-            event.end;
+        hourSelects.forEach(select => {
 
+            hours.forEach(hour => {
 
-        /*
-            YYYY-MM-DD 형식
-        */
+                select.add(
+                    new Option(
+                        hour + "시",
+                        hour
+                    )
+                );
 
-        document
-            .getElementById("start-date")
-            .value =
-                formatDateInput(start);
-
-
-        document
-            .getElementById("end-date")
-            .value =
-                formatDateInput(end);
-
-
-        document
-            .getElementById("start-hour")
-            .value =
-                start
-                .getHours()
-                .toString()
-                .padStart(2, "0");
-
-
-        document
-            .getElementById("start-min")
-            .value =
-                start
-                .getMinutes()
-                .toString()
-                .padStart(2, "0");
-
-
-        document
-            .getElementById("end-hour")
-            .value =
-                end
-                .getHours()
-                .toString()
-                .padStart(2, "0");
-
-
-        document
-            .getElementById("end-min")
-            .value =
-                end
-                .getMinutes()
-                .toString()
-                .padStart(2, "0");
-
-
-        /*
-            색상을 기반으로
-
-            출퇴근 / 예약 카테고리 자동 설정
-        */
-
-        const color =
-            event.backgroundColor ||
-            event.color;
-
-
-        if (
-            TAGS.attendance.some(
-                tag =>
-                    tag.val === color
-            )
-        ) {
-
-            document
-                .getElementById("category")
-                .value =
-                    "attendance";
-
-        }
-
-
-        else {
-
-            document
-                .getElementById("category")
-                .value =
-                    "reservation";
-
-        }
-
-
-        updateTagOptions();
-
-
-        document
-            .getElementById("event-color")
-            .value =
-                color;
-
-
-        document
-            .getElementById("save-btn")
-            .innerText =
-                "일정 수정하기";
-
-
-        /*
-            입력창으로 자동 이동
-        */
-
-        window.scrollTo({
-
-            top: 0,
-
-            behavior: "smooth"
+            });
 
         });
 
-    }
 
+        minSelects.forEach(select => {
 
-    /*
-        Date 객체를
+            mins.forEach(min => {
 
-        input[type=date]에 맞는
-        YYYY-MM-DD 형태로 변환
-    */
-
-    function formatDateInput(date) {
-
-        const year =
-            date.getFullYear();
-
-
-        const month =
-            String(
-                date.getMonth() + 1
-            )
-            .padStart(
-                2,
-                "0"
-            );
-
-
-        const day =
-            String(
-                date.getDate()
-            )
-            .padStart(
-                2,
-                "0"
-            );
-
-
-        return `${year}-${month}-${day}`;
-
-    }
-
-
-    function updateStats(info) {
-
-        const events =
-            info.view
-            .calendar
-            .getEvents();
-
-
-        const stats = {};
-
-
-        const statsTitle =
-            document
-            .getElementById(
-                "stats-title"
-            );
-
-
-        let filterStart =
-            info.view.activeStart;
-
-
-        let filterEnd =
-            info.view.activeEnd;
-
-
-        if (
-            info.view.type ===
-            "dayGridMonth"
-        ) {
-
-            const currentMonth =
-                info.view
-                .currentStart
-                .getMonth();
-
-
-            const currentYear =
-                info.view
-                .currentStart
-                .getFullYear();
-
-
-            statsTitle.innerText =
-                `${currentYear}년 ${currentMonth + 1}월 통계`;
-
-
-            events.forEach(
-                ev => {
-
-                    if (
-
-                        ev.start.getMonth() ===
-                        currentMonth
-
-                        &&
-
-                        ev.start.getFullYear() ===
-                        currentYear
-
-                    ) {
-
-                        const color =
-                            ev.backgroundColor ||
-                            ev.color;
-
-
-                        const dur =
-                            (
-                                ev.end -
-                                ev.start
-                            )
-                            /
-                            3600000;
-
-
-                        stats[color] =
-                            (
-                                stats[color] ||
-                                0
-                            )
-                            +
-                            dur;
-
-                    }
-
-                }
-            );
-
-        }
-
-
-        else {
-
-            statsTitle.innerText =
-                "주간 통계";
-
-
-            events.forEach(
-                ev => {
-
-                    if (
-
-                        ev.start >=
-                        filterStart
-
-                        &&
-
-                        ev.start <
-                        filterEnd
-
-                    ) {
-
-                        const color =
-                            ev.backgroundColor ||
-                            ev.color;
-
-
-                        const dur =
-                            (
-                                ev.end -
-                                ev.start
-                            )
-                            /
-                            3600000;
-
-
-                        stats[color] =
-                            (
-                                stats[color] ||
-                                0
-                            )
-                            +
-                            dur;
-
-                    }
-
-                }
-            );
-
-        }
-
-
-        const container =
-            document
-            .getElementById(
-                "stats-content"
-            );
-
-
-        container.innerHTML =
-            "";
-
-
-        if (
-            Object.keys(stats).length ===
-            0
-        ) {
-
-            container.innerHTML =
-`<span style="
-color:#8e8e93;
-font-size:14px;
-">
-기록이 없습니다.
-</span>`;
-
-
-            return;
-
-        }
-
-
-        const sortedEntries =
-            Object.entries(stats)
-            .sort(
-                (a, b) =>
-                    SORT_ORDER.indexOf(
-                        a[0]
+                select.add(
+                    new Option(
+                        min + "분",
+                        min
                     )
-                    -
-                    SORT_ORDER.indexOf(
-                        b[0]
-                    )
-            );
-
-
-        sortedEntries.forEach(
-            ([color, hours]) => {
-
-                const item =
-                    document
-                    .createElement(
-                        "div"
-                    );
-
-
-                item.className =
-                    "stat-item";
-
-
-                item.innerHTML =
-`<div
-class="stat-dot"
-style="background:${color}">
-</div>
-
-<span>
-${COLOR_MAP[color] || "기타"}:
-${hours.toFixed(1)}h
-</span>`;
-
-
-                container
-                .appendChild(
-                    item
                 );
 
-            }
-        );
+            });
 
-    }
-
-
-    /*
-        새 일정 등록
-        또는
-        기존 일정 수정
-    */
-
-    async function saveEvent() {
-
-
-        const title =
-            document
-            .getElementById("title")
-            .value
-            .trim();
-
-
-        if (!title) {
-
-            return alert(
-                "이름/예약명을 입력해주세요."
-            );
-
-        }
-
-
-        const color =
-            document
-            .getElementById(
-                "event-color"
-            )
-            .value;
-
-
-        const start =
-`${document.getElementById("start-date").value}T${document.getElementById("start-hour").value}:${document.getElementById("start-min").value}:00`;
-
-
-        const end =
-`${document.getElementById("end-date").value}T${document.getElementById("end-hour").value}:${document.getElementById("end-min").value}:00`;
-
-
-        /*
-            종료 시간이 시작 시간보다
-            빠르거나 같으면 저장 금지
-        */
-
-        if (
-            new Date(end) <=
-            new Date(start)
-        ) {
-
-            alert(
-                "종료 일시는 시작 일시보다 늦어야 합니다."
-            );
-
-            return;
-
-        }
-
-
-        try {
-
-
-            /*
-                수정 모드
-            */
-
-            if (
-                editingEventId
-            ) {
-
-
-                const res =
-                    await fetch(
-`${API_URL}/id/${editingEventId}`,
-                        {
-
-                            method:
-                                "PATCH",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body:
-                                JSON.stringify({
-
-                                    data: {
-
-                                        title,
-
-                                        start,
-
-                                        end,
-
-                                        color
-
-                                    }
-
-                                })
-
-                        }
-                    );
-
-
-                if (
-                    res.ok
-                ) {
-
-                    alert(
-                        "일정이 수정되었습니다."
-                    );
-
-
-                    resetForm();
-
-
-                    calendar
-                    .refetchEvents();
-
-                }
-
-
-                else {
-
-                    alert(
-                        "일정 수정에 실패했습니다."
-                    );
-
-                }
-
-            }
-
-
-            /*
-                새 일정 등록
-            */
-
-            else {
-
-
-                const res =
-                    await fetch(
-                        API_URL,
-                        {
-
-                            method:
-                                "POST",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body:
-                                JSON.stringify({
-
-                                    data: [
-
-                                        {
-
-                                            title,
-
-                                            start,
-
-                                            end,
-
-                                            color,
-
-                                            id:
-                                                "NOQ-" +
-                                                Date.now()
-
-                                        }
-
-                                    ]
-
-                                })
-
-                        }
-                    );
-
-
-                if (
-                    res.ok
-                ) {
-
-                    alert(
-                        "등록되었습니다."
-                    );
-
-
-                    calendar
-                    .refetchEvents();
-
-
-                    calendar
-                    .gotoDate(
-                        start
-                    );
-
-
-                    resetForm();
-
-                }
-
-            }
-
-        }
-
-
-        catch (e) {
-
-            console.error(e);
-
-            alert(
-                "오류가 발생했습니다."
-            );
-
-        }
-
-    }
-
-
-    /*
-        입력창 초기화
-
-        수정 모드도 종료
-    */
-
-    function resetForm() {
-
-
-        editingEventId =
-            null;
-
-
-        document
-            .getElementById("title")
-            .value =
-                "";
+        });
 
 
         const today =
             getKoreaToday();
 
 
-        document
-            .getElementById("start-date")
-            .value =
-                today;
+        document.getElementById(
+            "start-date"
+        ).value = today;
 
 
-        document
-            .getElementById("end-date")
-            .value =
-                today;
+        document.getElementById(
+            "end-date"
+        ).value = today;
 
 
-        document
-            .getElementById("category")
-            .value =
-                "attendance";
+        updateFormByCategory();
+
+        initCalendar();
+
+        initModal();
+
+    }
+);
 
 
-        updateTagOptions();
+/* 구분 변경 */
+
+function updateFormByCategory() {
+
+    const category =
+        document.getElementById(
+            "category"
+        ).value;
 
 
-        document
-            .getElementById("save-btn")
-            .innerText =
-                "일정 등록하기";
+    const attendanceFields =
+        document.getElementById(
+            "attendance-fields"
+        );
+
+
+    const reservationFields =
+        document.getElementById(
+            "reservation-fields"
+        );
+
+
+    if (
+        category === "attendance"
+    ) {
+
+        attendanceFields.style.display =
+            "flex";
+
+        reservationFields.style.display =
+            "none";
+
+    }
+
+    else {
+
+        attendanceFields.style.display =
+            "none";
+
+        reservationFields.style.display =
+            "flex";
+
+    }
+
+}
+
+
+/* 캘린더 */
+
+function initCalendar() {
+
+    const calendarEl =
+        document.getElementById(
+            "calendar"
+        );
+
+
+    calendar =
+        new FullCalendar.Calendar(
+            calendarEl,
+            {
+
+                initialView:
+                    "timeGridWeek",
+
+                locale:
+                    "ko",
+
+                firstDay:
+                    1,
+
+                slotMinTime:
+                    "00:00:00",
+
+                slotMaxTime:
+                    "24:00:00",
+
+                scrollTime:
+                    "09:00:00",
+
+                contentHeight:
+                    700,
+
+                nowIndicator:
+                    true,
+
+                allDaySlot:
+                    false,
+
+                eventTimeFormat: {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false
+                },
+
+                headerToolbar: {
+                    left: "prev,next today",
+                    center: "title",
+                    right: "dayGridMonth,timeGridWeek,listWeek"
+                },
+
+                eventSources: [
+                    {
+                        url: API_URL,
+
+                        success:
+                            content =>
+                                content.map(
+                                    item => ({
+                                        id: item.id,
+                                        title: item.title,
+                                        start: item.start,
+                                        end: item.end,
+                                        color: item.color
+                                    })
+                                )
+                    }
+                ],
+
+                datesSet:
+                    info =>
+                        setTimeout(
+                            () =>
+                                updateStats(info),
+                            500
+                        ),
+
+                eventClick:
+                    info => {
+
+                        selectedEvent =
+                            info.event;
+
+                        openEventModal(
+                            info.event
+                        );
+
+                    },
+
+                eventContent:
+                    arg => {
+
+                        if (
+                            arg.view.type ===
+                            "listWeek"
+                        ) {
+
+                            const t =
+                                document.createElement(
+                                    "div"
+                                );
+
+                            t.innerText =
+                                arg.event.title;
+
+                            t.style.fontSize =
+                                "17px";
+
+                            t.style.fontWeight =
+                                "800";
+
+                            return {
+                                domNodes: [t]
+                            };
+
+                        }
+
+
+                        const wrapper =
+                            document.createElement(
+                                "div"
+                            );
+
+                        wrapper.style.display =
+                            "flex";
+
+                        wrapper.style.flexDirection =
+                            "column";
+
+
+                        if (
+                            arg.view.type ===
+                            "dayGridMonth"
+                        ) {
+
+                            wrapper.style.flexDirection =
+                                "row";
+
+                            wrapper.style.alignItems =
+                                "center";
+
+
+                            const dot =
+                                document.createElement(
+                                    "div"
+                                );
+
+                            dot.style.cssText =
+                                `width:8px;
+                                height:8px;
+                                border-radius:50%;
+                                background:${arg.event.backgroundColor};
+                                margin-right:5px;`;
+
+                            wrapper.appendChild(dot);
+
+                        }
+
+
+                        const content =
+                            document.createElement(
+                                "div"
+                            );
+
+
+                        if (
+                            arg.view.type ===
+                            "timeGridWeek"
+                        ) {
+
+                            content.innerHTML =
+                                `<div style="
+                                    font-size:14px;
+                                    opacity:0.8;
+                                ">
+                                    ${arg.timeText}
+                                </div>
+
+                                <div style="
+                                    font-weight:800;
+                                    font-size:17px;
+                                ">
+                                    ${arg.event.title}
+                                </div>`;
+
+                        }
+
+                        else {
+
+                            content.innerText =
+                                arg.event.title;
+
+                            content.style.fontWeight =
+                                "800";
+
+                        }
+
+
+                        wrapper.appendChild(
+                            content
+                        );
+
+
+                        return {
+                            domNodes: [wrapper]
+                        };
+
+                    }
+
+            }
+        );
+
+
+    calendar.render();
+
+}
+
+
+/* 팝업 */
+
+function initModal() {
+
+    const modal =
+        document.getElementById(
+            "event-modal"
+        );
+
+
+    document.getElementById(
+        "modal-edit-btn"
+    ).onclick =
+        () => {
+
+            if (selectedEvent) {
+
+                loadEventForEdit(
+                    selectedEvent
+                );
+
+            }
+
+            closeEventModal();
+
+        };
+
+
+    document.getElementById(
+        "modal-delete-btn"
+    ).onclick =
+        async () => {
+
+            if (selectedEvent) {
+
+                const eventId =
+                    selectedEvent.id;
+
+                closeEventModal();
+
+
+                if (
+                    confirm(
+                        "정말 이 일정을 삭제하시겠습니까?"
+                    )
+                ) {
+
+                    await deleteEventById(
+                        eventId
+                    );
+
+                }
+
+            }
+
+        };
+
+
+    document.getElementById(
+        "modal-cancel-btn"
+    ).onclick =
+        () =>
+            closeEventModal();
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                closeEventModal();
+
+            }
+
+        }
+    );
+
+}
+
+
+function openEventModal(event) {
+
+    document.getElementById(
+        "modal-title"
+    ).innerText =
+        event.title;
+
+
+    document.getElementById(
+        "modal-message"
+    ).innerText =
+        "원하는 작업을 선택하세요.";
+
+
+    document.getElementById(
+        "event-modal"
+    ).classList.add(
+        "show"
+    );
+
+}
+
+
+function closeEventModal() {
+
+    document.getElementById(
+        "event-modal"
+    ).classList.remove(
+        "show"
+    );
+
+    selectedEvent = null;
+
+}
+
+
+/* 수정 모드 */
+
+function loadEventForEdit(event) {
+
+    editingEventId =
+        event.id;
+
+
+    const start =
+        event.start;
+
+    const end =
+        event.end;
+
+
+    const color =
+        event.backgroundColor ||
+        event.color;
+
+
+    const member =
+        Object.keys(
+            MEMBER_COLORS
+        ).find(
+            name =>
+                MEMBER_COLORS[name] ===
+                color
+        );
+
+
+    if (member) {
+
+        document.getElementById(
+            "category"
+        ).value =
+            "attendance";
+
+
+        updateFormByCategory();
+
+
+        document.getElementById(
+            "member"
+        ).value =
+            member;
+
+
+        const workType =
+            event.title
+                .replace(
+                    member,
+                    ""
+                )
+                .trim();
+
+
+        if (
+            [
+                "사무실",
+                "재택",
+                "외근",
+                "공연"
+            ].includes(workType)
+        ) {
+
+            document.getElementById(
+                "work-type"
+            ).value =
+                workType;
+
+        }
+
+    }
+
+    else {
+
+        document.getElementById(
+            "category"
+        ).value =
+            "reservation";
+
+
+        updateFormByCategory();
+
+
+        document.getElementById(
+            "reservation-title"
+        ).value =
+            event.title;
 
     }
 
 
-    async function deleteEventById(id) {
+    document.getElementById(
+        "start-date"
+    ).value =
+        formatDateInput(start);
 
-        try {
+
+    document.getElementById(
+        "end-date"
+    ).value =
+        formatDateInput(end);
+
+
+    document.getElementById(
+        "start-hour"
+    ).value =
+        String(
+            start.getHours()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "start-min"
+    ).value =
+        String(
+            start.getMinutes()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "end-hour"
+    ).value =
+        String(
+            end.getHours()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "end-min"
+    ).value =
+        String(
+            end.getMinutes()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "save-btn"
+    ).innerText =
+        "일정 수정하기";
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+/* 날짜 변환 */
+
+function formatDateInput(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, "0");
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+/* 중복 예약 검사 */
+
+function hasReservationConflict(
+    start,
+    end,
+    ignoreId = null
+) {
+
+    const events =
+        calendar.getEvents();
+
+
+    const newStart =
+        new Date(start);
+
+    const newEnd =
+        new Date(end);
+
+
+    return events.some(
+        event => {
+
+            /* 수정 중인 자기 자신 제외 */
+
+            if (
+                event.id === ignoreId
+            ) {
+                return false;
+            }
+
+
+            const eventColor =
+                event.backgroundColor ||
+                event.color;
+
+
+            /* 빨간색 일정만 공용 공간 예약 */
+
+            if (
+                eventColor !==
+                RESERVATION_COLOR
+            ) {
+                return false;
+            }
+
+
+            const existingStart =
+                event.start;
+
+            const existingEnd =
+                event.end;
+
+
+            return (
+                newStart < existingEnd
+                &&
+                newEnd > existingStart
+            );
+
+        }
+    );
+
+}
+
+
+/* 일정 저장 */
+
+async function saveEvent() {
+
+    const category =
+        document.getElementById(
+            "category"
+        ).value;
+
+
+    let title;
+    let color;
+
+
+    /* 구성원 출근 */
+
+    if (
+        category === "attendance"
+    ) {
+
+        const member =
+            document.getElementById(
+                "member"
+            ).value;
+
+
+        const workType =
+            document.getElementById(
+                "work-type"
+            ).value;
+
+
+        title =
+            `${member} ${workType}`;
+
+
+        color =
+            MEMBER_COLORS[member];
+
+    }
+
+
+    /* 공용 공간 예약 */
+
+    else {
+
+        title =
+            document.getElementById(
+                "reservation-title"
+            ).value
+            .trim();
+
+
+        if (!title) {
+
+            alert(
+                "예약명을 입력해주세요."
+            );
+
+            return;
+
+        }
+
+
+        color =
+            RESERVATION_COLOR;
+
+    }
+
+
+    const start =
+        `${document.getElementById("start-date").value}T${document.getElementById("start-hour").value}:${document.getElementById("start-min").value}:00`;
+
+
+    /* 수정된 종료 시간 생성 */
+
+    const end =
+        `${document.getElementById("end-date").value}T${document.getElementById("end-hour").value}:${document.getElementById("end-min").value}:00`;
+
+
+    /* 종료 시간이 시작 시간보다 빠르거나 같으면 차단 */
+
+    if (
+        new Date(end) <=
+        new Date(start)
+    ) {
+
+        alert(
+            "종료 일시는 시작 일시보다 늦어야 합니다."
+        );
+
+        return;
+
+    }
+
+
+    /* 공용 공간 예약 중복 검사 */
+
+    if (
+        category === "reservation"
+    ) {
+
+        const conflict =
+            hasReservationConflict(
+                start,
+                end,
+                editingEventId
+            );
+
+
+        if (conflict) {
+
+            alert(
+                "이미 해당 시간에 공용 공간 예약이 있습니다.\n다른 시간을 선택해주세요."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    try {
+
+        /* 수정 */
+
+        if (
+            editingEventId
+        ) {
 
             const res =
                 await fetch(
-`${API_URL}/id/${id}`,
+                    `${API_URL}/id/${editingEventId}`,
                     {
+                        method: "PATCH",
 
-                        method:
-                            "DELETE"
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                data: {
+                                    title,
+                                    start,
+                                    end,
+                                    color
+                                }
+                            })
 
                     }
                 );
 
 
-            if (
-                res.ok
-            ) {
+            if (res.ok) {
 
                 alert(
-                    "삭제되었습니다."
+                    "일정이 수정되었습니다."
                 );
 
+                resetForm();
 
-                /*
-                    수정 중이던 일정이
-                    삭제된 경우
-                    입력창도 초기화
-                */
-
-                if (
-                    editingEventId ===
-                    id
-                ) {
-
-                    resetForm();
-
-                }
-
-
-                calendar
-                .refetchEvents();
+                calendar.refetchEvents();
 
             }
 
             else {
 
                 alert(
-                    "삭제에 실패했습니다."
+                    "일정 수정에 실패했습니다."
                 );
 
             }
@@ -1664,20 +1481,381 @@ ${hours.toFixed(1)}h
         }
 
 
-        catch (e) {
+        /* 신규 등록 */
 
-            console.error(e);
+        else {
+
+            const res =
+                await fetch(
+                    API_URL,
+                    {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                data: [
+                                    {
+                                        title,
+                                        start,
+                                        end,
+                                        color,
+
+                                        id:
+                                            "NOQ-" +
+                                            Date.now()
+                                    }
+                                ]
+
+                            })
+
+                    }
+                );
+
+
+            if (res.ok) {
+
+                alert(
+                    "등록되었습니다."
+                );
+
+                calendar.refetchEvents();
+
+                calendar.gotoDate(start);
+
+                resetForm();
+
+            }
+
+            else {
+
+                alert(
+                    "일정 등록에 실패했습니다."
+                );
+
+            }
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            "오류가 발생했습니다."
+        );
+
+    }
+
+}
+
+
+/* 삭제 */
+
+async function deleteEventById(id) {
+
+    try {
+
+        const res =
+            await fetch(
+                `${API_URL}/id/${id}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+
+        if (res.ok) {
 
             alert(
-                "오류가 발생했습니다."
+                "삭제되었습니다."
+            );
+
+
+            if (
+                editingEventId === id
+            ) {
+
+                resetForm();
+
+            }
+
+
+            calendar.refetchEvents();
+
+        }
+
+        else {
+
+            alert(
+                "삭제에 실패했습니다."
             );
 
         }
 
     }
 
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            "오류가 발생했습니다."
+        );
+
+    }
+
+}
+
+
+/* 입력창 초기화 */
+
+function resetForm() {
+
+    editingEventId = null;
+
+
+    document.getElementById(
+        "category"
+    ).value =
+        "attendance";
+
+
+    updateFormByCategory();
+
+
+    document.getElementById(
+        "reservation-title"
+    ).value =
+        "";
+
+
+    const today =
+        getKoreaToday();
+
+
+    document.getElementById(
+        "start-date"
+    ).value =
+        today;
+
+
+    document.getElementById(
+        "end-date"
+    ).value =
+        today;
+
+
+    document.getElementById(
+        "save-btn"
+    ).innerText =
+        "일정 등록하기";
+
+}
+
+
+/* 통계 */
+
+function updateStats(info) {
+
+    const events =
+        info.view.calendar.getEvents();
+
+
+    const stats = {};
+
+
+    const statsTitle =
+        document.getElementById(
+            "stats-title"
+        );
+
+
+    const filterStart =
+        info.view.activeStart;
+
+    const filterEnd =
+        info.view.activeEnd;
+
+
+    if (
+        info.view.type ===
+        "dayGridMonth"
+    ) {
+
+        const currentMonth =
+            info.view.currentStart.getMonth();
+
+        const currentYear =
+            info.view.currentStart.getFullYear();
+
+
+        statsTitle.innerText =
+            `${currentYear}년 ${currentMonth + 1}월 통계`;
+
+
+        events.forEach(
+            event => {
+
+                if (
+                    event.start.getMonth() ===
+                    currentMonth
+
+                    &&
+
+                    event.start.getFullYear() ===
+                    currentYear
+                ) {
+
+                    const color =
+                        event.backgroundColor ||
+                        event.color;
+
+
+                    const duration =
+                        (
+                            event.end -
+                            event.start
+                        )
+                        / 3600000;
+
+
+                    stats[color] =
+                        (
+                            stats[color] || 0
+                        )
+                        + duration;
+
+                }
+
+            }
+        );
+
+    }
+
+    else {
+
+        statsTitle.innerText =
+            "주간 통계";
+
+
+        events.forEach(
+            event => {
+
+                if (
+                    event.start >= filterStart
+                    &&
+                    event.start < filterEnd
+                ) {
+
+                    const color =
+                        event.backgroundColor ||
+                        event.color;
+
+
+                    const duration =
+                        (
+                            event.end -
+                            event.start
+                        )
+                        / 3600000;
+
+
+                    stats[color] =
+                        (
+                            stats[color] || 0
+                        )
+                        + duration;
+
+                }
+
+            }
+        );
+
+    }
+
+
+    const container =
+        document.getElementById(
+            "stats-content"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (
+        Object.keys(stats).length === 0
+    ) {
+
+        container.innerHTML =
+            `<span style="
+                color:#8e8e93;
+                font-size:14px;
+            ">
+                기록이 없습니다.
+            </span>`;
+
+        return;
+
+    }
+
+
+    const sortedEntries =
+        Object.entries(stats)
+        .sort(
+            (a, b) =>
+                SORT_ORDER.indexOf(a[0])
+                -
+                SORT_ORDER.indexOf(b[0])
+        );
+
+
+    sortedEntries.forEach(
+        ([color, hours]) => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.className =
+                "stat-item";
+
+
+            item.innerHTML =
+                `<div
+                    class="stat-dot"
+                    style="
+                        background:${color}
+                    "
+                ></div>
+
+                <span>
+                    ${COLOR_MAP[color] || "기타"}:
+                    ${hours.toFixed(1)}h
+                </span>`;
+
+
+            container.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
 </script>
 
 </body>
 </html>
-```
